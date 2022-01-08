@@ -33,6 +33,8 @@ type
 
     procedure EachViewUpdateHeader(AFileView: TFileView; {%H-}UserData: Pointer);
 
+    procedure UpdateConstraintsMinHeight(MinHeight: Integer);
+
   protected
     tmViewHistoryMenu: TTimer;
     procedure PathLabelSetColor(APathLabel: TPathLabel);
@@ -94,6 +96,7 @@ const
 
 procedure TFileViewHeader.PathEditExit(Sender: TObject);
 begin
+  FPathLabel.Color := FAddressLabel.Color;
   FPathEdit.Visible := False;
 end;
 
@@ -250,6 +253,13 @@ begin
   TFileViewWithPanels(AFileView).Header.UpdateFont;
 end;
 
+procedure TFileViewHeader.UpdateConstraintsMinHeight(MinHeight: Integer);
+begin
+  Constraints.MinHeight := MinHeight;
+  FPathLabel.Constraints.MinHeight := MinHeight;
+  FAddressLabel.Constraints.MinHeight := MinHeight;
+end;
+
 procedure TFileViewHeader.PathLabelSetColor(APathLabel: TPathLabel);
 begin
   APathLabel.ActiveColor:= gPathActiveColor;
@@ -286,15 +296,32 @@ begin
   FAddressLabel.Align := alTop;
 
   FPathEdit:= TKASPathEdit.Create(FPathLabel);
-  FPathEdit.Parent:= Self;
-  FPathEdit.Visible:= False;
-  FPathEdit.TabStop:= False;
-  FPathEdit.ObjectTypes:= [otFolders, otHidden];
+  with FPathEdit do
+  begin
+    Parent:= Self;
+    Visible:= False;
+    AutoSize:= False;
+    TabStop:= False;
+    ObjectTypes:= [otFolders, otHidden];
+
+    AnchorSideLeft.Control:= FPathLabel;
+    AnchorSideTop.Control:= FPathLabel;
+    AnchorSideRight.Control:= FPathLabel;
+    AnchorSideRight.Side:= asrRight;
+    AnchorSideBottom.Control:= FPathLabel;
+    AnchorSideBottom.Side:= asrBottom;
+    Anchors:= [akTop, akLeft, akRight, akBottom];
+
+    BorderWidth:= 0;
+    BorderStyle:= bsNone;
+    BorderSpacing.Around:= 1;
+    BorderSpacing.InnerBorder:= 0;
+
+    OnExit:= @PathEditExit;
+    OnKeyDown:= @PathEditKeyDown;
+  end;
 
   OnResize:= @HeaderResize;
-
-  FPathEdit.OnExit:= @PathEditExit;
-  FPathEdit.OnKeyDown:= @PathEditKeyDown;
 
   FPathLabel.OnClick := @PathLabelClick;
   FPathLabel.OnDblClick := @PathLabelDblClick;
@@ -302,7 +329,6 @@ begin
 
   FPathLabel.OnMouseWheelDown := @PathLabelMouseWheelDown;
   FPathLabel.OnMouseWheelUp := @PathLabelMouseWheelUp;
-
 
   FAddressLabel.OnClick := @AddressLabelClick;
   FAddressLabel.OnMouseEnter:= @AddressLabelMouseEnter;
@@ -345,13 +371,15 @@ begin
   FontOptionsToFont(gFonts[dcfPathEdit], FAddressLabel.Font);
   FontOptionsToFont(gFonts[dcfPathEdit], FPathLabel.Font);
   FontOptionsToFont(gFonts[dcfPathEdit], FPathEdit.Font);
+
+  UpdateConstraintsMinHeight(FAddressLabel.Canvas.TextHeight('I') + 2);
 end;
 
 procedure TFileViewHeader.ShowPathEdit;
 begin
   with FPathLabel do
   begin
-    FPathEdit.SetBounds(Left, Top, Width, Height);
+    FPathLabel.Color := FPathEdit.Color;
     FPathEdit.Text := FFileView.CurrentPath;
     FPathEdit.Visible := True;
     FPathEdit.SetFocus;

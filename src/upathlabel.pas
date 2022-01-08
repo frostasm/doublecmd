@@ -100,7 +100,12 @@ uses
 
 constructor TPathLabel.Create(AOwner: TComponent; bAllowHighlight: Boolean);
 begin
-  FLeftSpacing := 3; // set before painting
+  // FLeftSpacing synchronized with indent text in path editor
+  {$IF DEFINED(LCLWIN32)}
+  FLeftSpacing := 1; 
+  {$ELSE}
+  FLeftSpacing := 3;
+  {$ENDIF}
 
   FColors[0] := clHighlight;
   FColors[1] := clHighlightText;
